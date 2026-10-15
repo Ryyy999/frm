@@ -56,7 +56,12 @@ void _setBrightness(uint8_t brightval) {
 **********************************************************************/
 void InputHandler(void) {
     static unsigned long tm = millis();
-    if (millis() - tm < 200) return;
+    static unsigned long swPressTime = 0;
+    static bool swWasPressed = false;
+    static bool longPressDone = false;
+
+    if (millis() - tm < 50) return;
+    tm = millis();
 
     int x = analogRead(JOY_X);
     int y = analogRead(JOY_Y);
@@ -65,21 +70,51 @@ void InputHandler(void) {
     bool dwPressed  = (y > JOY_HIGH);
     bool lPressed   = (x < JOY_LOW);
     bool rPressed   = (x > JOY_HIGH);
-    bool selPressed = (digitalRead(JOY_SW) == LOW);
+    bool swPressed  = (digitalRead(JOY_SW) == LOW);
 
-    bool anyPressed = upPressed || dwPressed || lPressed || rPressed || selPressed;
+    bool anyPressed = upPressed || dwPressed || lPressed || rPressed || swPressed;
     if (!anyPressed) return;
 
-    tm = millis();
     if (!wakeUpScreen()) AnyKeyPress = true;
     else return;
 
-    if (upPressed)  PrevPress = true;  // atas = naik
-    if (dwPressed)  NextPress = true;  // bawah = turun
-    if (lPressed)   EscPress  = true;  // kiri = kembali
-    if (selPressed) SelPress  = true;  // klik SW = enter
-}
+    // Menu utama: kanan = opsi berikutnya
+    // Submenu: bawah = pilih ke bawah
+    if (rPressed || dwPressed) {
+        NextPress = true;
+    }
 
+    // Menu utama: kiri = opsi sebelumnya
+    // Submenu: atas = pilih ke atas
+    if (lPressed || upPressed) {
+        PrevPress = true;
+    }
+
+    // Switch joystick:
+    // klik singkat = Enter
+    // tahan 1 detik = keluar / Esc
+    if (swPressed) {
+        if (!swWasPressed) {
+            swWasPressed = true;
+            longPressDone = false;
+            swPressTime = millis();
+        }
+
+        if (!longPressDone && millis() - swPressTime >= 1000) {
+            longPressDone = true;
+            LongPress = true;
+            EscPress = true;
+        }
+    } else {
+        if (swWasPressed && !longPressDone) {
+            SelPress = true;
+        }
+
+        swWasPressed = false;
+        longPressDone = false;
+        LongPress = false;
+    }
+}
 /*********************************************************************
 ** Function: powerOff
 ** location: mykeyboard.cpp
