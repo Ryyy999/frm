@@ -1,7 +1,7 @@
 #include "core/powerSave.h"
 #include <interface.h>
-#define JOY_X 34
-#define JOY_Y 35
+#define JOY_X 35
+#define JOY_Y 34
 #define JOY_SW 33
 #define JOY_LOW  1000
 #define JOY_HIGH 3000
@@ -74,10 +74,10 @@ void InputHandler(void) {
     if (!wakeUpScreen()) AnyKeyPress = true;
     else return;
 
-    if (upPressed) PrevPress = true;
-    if (dwPressed) NextPress = true;
-    if (lPressed)  EscPress  = true;
-    if (rPressed || selPressed) SelPress = true;
+    if (upPressed)  PrevPress = true;  // atas = naik
+    if (dwPressed)  NextPress = true;  // bawah = turun
+    if (lPressed)   EscPress  = true;  // kiri = kembali
+    if (selPressed) SelPress  = true;  // klik SW = enter
 }
 
 /*********************************************************************
