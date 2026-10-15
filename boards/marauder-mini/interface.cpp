@@ -1,10 +1,14 @@
 #include "core/powerSave.h"
 #include <interface.h>
+#include "core/display.h"
+
 #define JOY_X 35
 #define JOY_Y 34
 #define JOY_SW 33
 #define JOY_LOW  1000
 #define JOY_HIGH 3000
+#define JOY_INV_H 0
+#define JOY_INV_V 0
 
 /***************************************************************************************
 ** Function name: _setup_gpio()
@@ -55,61 +59,56 @@ void _setBrightness(uint8_t brightval) {
 ** Handles the variables PrevPress, NextPress, SelPress, AnyKeyPress and EscPress
 **********************************************************************/
 void InputHandler(void) {
-    static unsigned long tm = millis();
-    static unsigned long swPressTime = 0;
-    static bool swWasPressed = false;
-    static bool longPressDone = false;
+    static unsigned long tm = 0;
+    static unsigned long swStart = 0;
+    static bool swHeld = false;
+    static bool swLongDone = false;
+    unsigned long now = millis();
 
-    if (millis() - tm < 200) return;
+    // SW: tekan pendek = enter, tahan 2 detik = back
+    bool sw = (digitalRead(JOY_SW) == LOW);
+    if (sw && !swHeld) {
+        swHeld = true;
+        swStart = now;
+        swLongDone = false;
+        return;
+    }
+    if (sw && swHeld) {
+        if (!swLongDone && now - swStart >= 2000) {
+            swLongDone = true;
+            if (!wakeUpScreen()) { AnyKeyPress = true; EscPress = true; }
+        }
+        return;
+    }
+    if (!sw && swHeld) {
+        swHeld = false;
+        if (!swLongDone && now - swStart >= 40) {
+            if (!wakeUpScreen()) { AnyKeyPress = true; SelPress = true; }
+        }
+        return;
+    }
+
+    // Joystick
+    if (now - tm < 200) return;
 
     int x = analogRead(JOY_X);
     int y = analogRead(JOY_Y);
 
-    bool upPressed  = (y < JOY_LOW);
-    bool dwPressed  = (y > JOY_HIGH);
-    bool lPressed   = (x < JOY_LOW);
-    bool rPressed   = (x > JOY_HIGH);
-    bool selPressed = (digitalRead(JOY_SW) == LOW);
+    bool left  = JOY_INV_H ? (x > JOY_HIGH) : (x < JOY_LOW);
+    bool right = JOY_INV_H ? (x < JOY_LOW)  : (x > JOY_HIGH);
+    bool up    = JOY_INV_V ? (y > JOY_HIGH) : (y < JOY_LOW);
+    bool down  = JOY_INV_V ? (y < JOY_LOW)  : (y > JOY_HIGH);
 
-    // Sebelum Enter:
-    // kiri/kanan untuk pindah menu
-    if (lPressed) PrevPress = true;
-    if (rPressed) NextPress = true;
+    bool inMainMenu = (menuOptionType == MENU_TYPE_MAIN);
+    bool prev = inMainMenu ? left  : up;
+    bool next = inMainMenu ? right : down;
+    if (!prev && !next) return;
 
-    // Setelah Enter, misal di Wi-Fi:
-    // atas/bawah untuk pilih opsi
-    if (upPressed) PrevPress = true;
-    if (dwPressed) NextPress = true;
-
-    bool anyPressed = upPressed || dwPressed || lPressed || rPressed || selPressed;
-    if (!anyPressed) return;
-
-    tm = millis();
-    if (!wakeUpScreen()) AnyKeyPress = true;
-    else return;
-
-    // Switch joystick:
-    // klik singkat = Enter
-    // tahan 2 detik = kembali / keluar
-    if (selPressed) {
-        if (!swWasPressed) {
-            swWasPressed = true;
-            longPressDone = false;
-            swPressTime = millis();
-        }
-
-        if (!longPressDone && millis() - swPressTime >= 2000) {
-            longPressDone = true;
-            LongPress = true;
-            EscPress = true;
-        }
-    } else {
-        if (swWasPressed && !longPressDone) {
-            SelPress = true;
-        }
-
-        swWasPressed = false;
-        longPressDone = false;
+    tm = now;
+    if (!wakeUpScreen()) {
+        AnyKeyPress = true;
+        if (prev) PrevPress = true;
+        if (next) NextPress = true;
     }
 }
 /*********************************************************************
