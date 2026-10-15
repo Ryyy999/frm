@@ -1,7 +1,7 @@
 #include "core/powerSave.h"
 #include <interface.h>
-#define JOY_X 36
-#define JOY_Y 39
+#define JOY_X 34
+#define JOY_Y 35
 #define JOY_SW 33
 #define JOY_LOW  1000
 #define JOY_HIGH 3000
