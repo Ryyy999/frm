@@ -60,8 +60,7 @@ void InputHandler(void) {
     static bool swWasPressed = false;
     static bool longPressDone = false;
 
-    if (millis() - tm < 50) return;
-    tm = millis();
+    if (millis() - tm < 200) return;
 
     int x = analogRead(JOY_X);
     int y = analogRead(JOY_Y);
@@ -70,37 +69,36 @@ void InputHandler(void) {
     bool dwPressed  = (y > JOY_HIGH);
     bool lPressed   = (x < JOY_LOW);
     bool rPressed   = (x > JOY_HIGH);
-    bool swPressed  = (digitalRead(JOY_SW) == LOW);
+    bool selPressed = (digitalRead(JOY_SW) == LOW);
 
-    bool anyPressed = upPressed || dwPressed || lPressed || rPressed || swPressed;
+    // Sebelum Enter:
+    // kiri/kanan untuk pindah menu
+    if (lPressed) PrevPress = true;
+    if (rPressed) NextPress = true;
+
+    // Setelah Enter, misal di Wi-Fi:
+    // atas/bawah untuk pilih opsi
+    if (upPressed) PrevPress = true;
+    if (dwPressed) NextPress = true;
+
+    bool anyPressed = upPressed || dwPressed || lPressed || rPressed || selPressed;
     if (!anyPressed) return;
 
+    tm = millis();
     if (!wakeUpScreen()) AnyKeyPress = true;
     else return;
 
-    // Menu utama: kanan = opsi berikutnya
-    // Submenu: bawah = pilih ke bawah
-    if (rPressed || dwPressed) {
-        NextPress = true;
-    }
-
-    // Menu utama: kiri = opsi sebelumnya
-    // Submenu: atas = pilih ke atas
-    if (lPressed || upPressed) {
-        PrevPress = true;
-    }
-
     // Switch joystick:
     // klik singkat = Enter
-    // tahan 1 detik = keluar / Esc
-    if (swPressed) {
+    // tahan 2 detik = kembali / keluar
+    if (selPressed) {
         if (!swWasPressed) {
             swWasPressed = true;
             longPressDone = false;
             swPressTime = millis();
         }
 
-        if (!longPressDone && millis() - swPressTime >= 1000) {
+        if (!longPressDone && millis() - swPressTime >= 2000) {
             longPressDone = true;
             LongPress = true;
             EscPress = true;
@@ -112,7 +110,6 @@ void InputHandler(void) {
 
         swWasPressed = false;
         longPressDone = false;
-        LongPress = false;
     }
 }
 /*********************************************************************
