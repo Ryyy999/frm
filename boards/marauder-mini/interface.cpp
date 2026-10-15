@@ -1,5 +1,10 @@
 #include "core/powerSave.h"
 #include <interface.h>
+#define JOY_X 36
+#define JOY_Y 39
+#define JOY_SW 33
+#define JOY_LOW  1000
+#define JOY_HIGH 3000
 
 /***************************************************************************************
 ** Function name: _setup_gpio()
@@ -7,6 +12,9 @@
 ** Description:   initial setup for the device
 ***************************************************************************************/
 void _setup_gpio() {
+    pinMode(JOY_X, INPUT);
+    pinMode(JOY_Y, INPUT);
+    pinMode(JOY_SW, INPUT_PULLUP);
     pinMode(UP_BTN, INPUT);
     pinMode(SEL_BTN, INPUT);
     pinMode(DW_BTN, INPUT);
@@ -53,41 +61,28 @@ void _setBrightness(uint8_t brightval) {
 **********************************************************************/
 void InputHandler(void) {
     static unsigned long tm = millis();
-    static unsigned long esc_tm = millis();
-    static bool esc_armed = false;
-    if (!(millis() - tm > 200 || LongPress)) return;
+    if (millis() - tm < 200) return;
 
-    bool u = digitalRead(UP_BTN);
-    bool d = digitalRead(DW_BTN);
-    bool r = digitalRead(R_BTN);
-    bool l = digitalRead(L_BTN);
-    bool s = digitalRead(SEL_BTN);
-    if (!s || !u || !d || !r || !l) {
-        tm = millis();
-        if (!wakeUpScreen()) AnyKeyPress = true;
-        else return;
-    }
-    if (!l && !s) {
-        EscPress = true;
-        return;
-    }
-    if (!l) {
-        PrevPress = true;
-        if (esc_armed == false) {
-            esc_tm = millis();
-            esc_armed = true;
-        }
-    }
-    if (esc_armed && millis() - esc_tm > 1000) {
-        esc_armed = false;
-        esc_tm = millis();
-        PrevPress = false;
-        EscPress = true;
-    }
-    if (!r) NextPress = true;
-    if (!u) UpPress = true;
-    if (!d) DownPress = true;
-    if (!s) SelPress = true;
+    int x = analogRead(JOY_X);
+    int y = analogRead(JOY_Y);
+
+    bool upPressed  = (y < JOY_LOW);
+    bool dwPressed  = (y > JOY_HIGH);
+    bool lPressed   = (x < JOY_LOW);
+    bool rPressed   = (x > JOY_HIGH);
+    bool selPressed = (digitalRead(JOY_SW) == LOW);
+
+    bool anyPressed = upPressed || dwPressed || lPressed || rPressed || selPressed;
+    if (!anyPressed) return;
+
+    tm = millis();
+    if (!wakeUpScreen()) AnyKeyPress = true;
+    else return;
+
+    if (upPressed) PrevPress = true;
+    if (dwPressed) NextPress = true;
+    if (lPressed)  EscPress  = true;
+    if (rPressed || selPressed) SelPress = true;
 }
 
 /*********************************************************************
