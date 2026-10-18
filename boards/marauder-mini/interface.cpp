@@ -21,7 +21,7 @@ void _setup_gpio() {
     pinMode(JOY_SW, INPUT_PULLUP);
 
     bruceConfig.colorInverted = 0;
-    bruceConfigPins.rotation = 1; // portrait mode for Phantom
+    bruceConfigPins.rotation = 0; // portrait mode for Phantom
 }
 
 /***************************************************************************************
@@ -103,8 +103,13 @@ void InputHandler(void) {
     if (abs(x - 2048) >= abs(y - 2048)) { up = false; down = false; }
     else { left = false; right = false; }
 
+    bool inMainMenu = (menuOptionType == MENU_TYPE_MAIN);
+
+    // BARU: di luar menu utama (keyboard dll.), kiri/kanan dibalik
+    if (!inMainMenu) { bool t = left; left = right; right = t; }
+
     // menu utama: atas/bawah tidak berfungsi
-    if (menuOptionType == MENU_TYPE_MAIN) { up = false; down = false; }
+    if (inMainMenu) { up = false; down = false; }
 
     if (!left && !right && !up && !down) return;
 
