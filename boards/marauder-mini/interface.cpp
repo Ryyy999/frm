@@ -21,7 +21,7 @@ void _setup_gpio() {
     pinMode(JOY_SW, INPUT_PULLUP);
 
     bruceConfig.colorInverted = 0;
-    bruceConfigPins.rotation = 0; // portrait mode for Phantom
+    bruceConfigPins.rotation = 1; // portrait mode for Phantom
 }
 
 /***************************************************************************************
@@ -99,16 +99,22 @@ void InputHandler(void) {
     bool up    = JOY_INV_V ? (y > JOY_HIGH) : (y < JOY_LOW);
     bool down  = JOY_INV_V ? (y < JOY_LOW)  : (y > JOY_HIGH);
 
-    bool inMainMenu = (menuOptionType == MENU_TYPE_MAIN);
-    bool prev = inMainMenu ? left  : up;
-    bool next = inMainMenu ? right : down;
-    if (!prev && !next) return;
+    // miring: ambil sumbu yang paling condong saja
+    if (abs(x - 2048) >= abs(y - 2048)) { up = false; down = false; }
+    else { left = false; right = false; }
+
+    // menu utama: atas/bawah tidak berfungsi
+    if (menuOptionType == MENU_TYPE_MAIN) { up = false; down = false; }
+
+    if (!left && !right && !up && !down) return;
 
     tm = now;
     if (!wakeUpScreen()) {
         AnyKeyPress = true;
-        if (prev) PrevPress = true;
-        if (next) NextPress = true;
+        if (left)  PrevPress = true;
+        if (right) NextPress = true;
+        if (up)    UpPress   = true;
+        if (down)  DownPress = true;
     }
 }
 /*********************************************************************
