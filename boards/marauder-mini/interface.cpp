@@ -44,14 +44,18 @@ int getBattery() { return 0; }
 ** set brightness value
 **********************************************************************/
 void _setBrightness(uint8_t brightval) {
-    pinMode(TFT_BL, OUTPUT);
-    if (brightval > 5) {
-        digitalWrite(TFT_BL, LOW);
-        digitalWrite(TFT_BL, HIGH);
-    } else {
-        digitalWrite(TFT_BL, HIGH);
-        digitalWrite(TFT_BL, LOW);
+    if (brightval > 100) brightval = 100;
+
+    // 0 = backlight mati total (buat sleep / screen off)
+    if (brightval == 0) {
+        analogWrite(TFT_BL, 0);
+        return;
     }
+
+    // 1..100% dipetakan ke duty 25..255 supaya 1% tetap kelihatan
+    const uint8_t MIN_DUTY = 25;
+    uint8_t duty = MIN_DUTY + ((255 - MIN_DUTY) * brightval) / 100;
+    analogWrite(TFT_BL, duty);
 }
 
 /*********************************************************************
