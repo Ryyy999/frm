@@ -63,7 +63,6 @@ void _setBrightness(uint8_t brightval) {
 ** Handles the variables PrevPress, NextPress, SelPress, AnyKeyPress and EscPress
 **********************************************************************/
 void InputHandler(void) {
-    static unsigned long tm = 0;
     static unsigned long swStart = 0;
     static bool swHeld = false;
     static bool swLongDone = false;
@@ -92,32 +91,39 @@ void InputHandler(void) {
         return;
     }
 
-    // Joystick
-    if (now - tm < 200) return;
+    // Joystick: satu dorongan = satu gerakan, tidak berulang selama ditahan
+    static bool hArmed = true;
+    static bool vArmed = true;
+    const int NEUTRAL_LOW  = 1500;
+    const int NEUTRAL_HIGH = 2500;
 
     int x = analogRead(JOY_X);
     int y = analogRead(JOY_Y);
 
-    bool left  = JOY_INV_H ? (x > JOY_HIGH) : (x < JOY_LOW);
-    bool right = JOY_INV_H ? (x < JOY_LOW)  : (x > JOY_HIGH);
-    bool up    = JOY_INV_V ? (y > JOY_HIGH) : (y < JOY_LOW);
-    bool down  = JOY_INV_V ? (y < JOY_LOW)  : (y > JOY_HIGH);
+    if (x > NEUTRAL_LOW && x < NEUTRAL_HIGH) hArmed = true;
+    if (y > NEUTRAL_LOW && y < NEUTRAL_HIGH) vArmed = true;
 
-    // miring: ambil sumbu yang paling condong saja
-    if (abs(x - 2048) >= abs(y - 2048)) { up = false; down = false; }
-    else { left = false; right = false; }
+    bool left = false, right = false, up = false, down = false;
+    bool horizontalWins = (abs(x - 2048) >= abs(y - 2048));
+
+    if (horizontalWins && hArmed) {
+        bool l = JOY_INV_H ? (x > JOY_HIGH) : (x < JOY_LOW);
+        bool r = JOY_INV_H ? (x < JOY_LOW)  : (x > JOY_HIGH);
+        if (l) { left = true; hArmed = false; }
+        if (r) { right = true; hArmed = false; }
+    } else if (!horizontalWins && vArmed) {
+        bool u = JOY_INV_V ? (y > JOY_HIGH) : (y < JOY_LOW);
+        bool d = JOY_INV_V ? (y < JOY_LOW)  : (y > JOY_HIGH);
+        if (u) { up = true; vArmed = false; }
+        if (d) { down = true; vArmed = false; }
+    }
 
     bool inMainMenu = (menuOptionType == MENU_TYPE_MAIN);
-
-    // BARU: di luar menu utama (keyboard dll.), kiri/kanan dibalik
     if (!inMainMenu) { bool t = left; left = right; right = t; }
-
-    // menu utama: atas/bawah tidak berfungsi
     if (inMainMenu) { up = false; down = false; }
 
     if (!left && !right && !up && !down) return;
 
-    tm = now;
     if (!wakeUpScreen()) {
         AnyKeyPress = true;
         if (left)  PrevPress = true;
